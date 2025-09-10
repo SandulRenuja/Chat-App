@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Path for photos taken with the app's camera -->
+    <external-files-path name="my_images" path="Pictures" />
+    <!-- Path for sharing any file from external storage (needed for gallery images) -->
+    <external-path name="external_storage_root" path="." />
+</paths>

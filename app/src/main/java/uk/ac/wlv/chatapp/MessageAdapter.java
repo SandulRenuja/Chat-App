@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
@@ -164,10 +163,6 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
     }
 
-
-    /**
-     * Prepares and launches the Android Share Intent for the selected message.
-     */
     public void shareSelectedMessage() {
         if (selectedMessages.size() != 1) {
             return; // Safety check
@@ -181,14 +176,16 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             context.startActivity(Intent.createChooser(shareIntent, "Share message via"));
         } else if (messageToShare.getType() == Message.MessageType.IMAGE) {
             shareIntent.setType("image/jpeg");
-            String imageUriString = messageToShare.getContent();
-
-            // The stored content is a URI string (e.g., "file:///...").
-            // We need to parse it to a Uri object first.
-            Uri imageUri = Uri.parse(imageUriString);
-
-            // Create a File object from the URI's path.
-            File imageFile = new File(Objects.requireNonNull(imageUri.getPath()));
+            Uri imageUri = Uri.parse(messageToShare.getContent());
+            File imageFile;
+            try {
+                // This is a simplified way to handle file URIs. A more robust solution
+                // might be needed for content URIs from other providers.
+                imageFile = new File(imageUri.getPath());
+            } catch (Exception e) {
+                Toast.makeText(context, "Cannot share this image type.", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             if (!imageFile.exists()) {
                 Toast.makeText(context, "Image file not found", Toast.LENGTH_SHORT).show();
@@ -196,23 +193,20 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
 
             try {
-                // Use FileProvider to get a secure content URI for the image file
-                Uri shareableUri = FileProvider.getUriForFile(
+                Uri contentUri = FileProvider.getUriForFile(
                         context,
                         context.getApplicationContext().getPackageName() + ".provider",
                         imageFile
                 );
 
-                shareIntent.putExtra(Intent.EXTRA_STREAM, shareableUri);
-                // If the image has a caption, share it as the text part of the message
+                shareIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
                 if (messageToShare.getCaption() != null && !messageToShare.getCaption().isEmpty()) {
                     shareIntent.putExtra(Intent.EXTRA_TEXT, messageToShare.getCaption());
                 }
-                // Grant permission to the receiving app to read the file
                 shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 context.startActivity(Intent.createChooser(shareIntent, "Share image via"));
             } catch (IllegalArgumentException e) {
-                Log.e("MessageAdapter", "FileProvider error for path: " + imageFile.getPath(), e);
+                Log.e("MessageAdapter", "FileProvider error for path: " + imageFile.getAbsolutePath(), e);
                 Toast.makeText(context, "Failed to share image. File path is invalid.", Toast.LENGTH_LONG).show();
             }
         }
@@ -260,6 +254,8 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             for (Message item : messageListFull) {
                 if (item.getType() == Message.MessageType.TEXT && item.getContent().toLowerCase().contains(text)) {
                     messageList.add(item);
+                } else if (item.getType() == Message.MessageType.IMAGE && item.getCaption() != null && item.getCaption().toLowerCase().contains(text)) {
+                    messageList.add(item);
                 }
             }
         }
@@ -279,8 +275,9 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     public boolean isEditAllowed() {
-        if (!selectedMessages.isEmpty()) {
-            return selectedMessages.get(0).getType() == Message.MessageType.TEXT;
+        if (selectedMessages.size() == 1) {
+            Message.MessageType type = selectedMessages.get(0).getType();
+            return type == Message.MessageType.TEXT || type == Message.MessageType.IMAGE;
         }
         return false;
     }
@@ -294,19 +291,32 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     private void showEditDialog(final Message message, final int position) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Edit Message");
         final View customLayout = LayoutInflater.from(context).inflate(R.layout.dialog_edit_message, null);
         builder.setView(customLayout);
-        final EditText editTextNewMessage = customLayout.findViewById(R.id.editTextNewMessage);
-        editTextNewMessage.setText(message.getContent());
+        final EditText editTextNewText = customLayout.findViewById(R.id.editTextNewMessage);
+
+        final boolean isTextMessage = message.getType() == Message.MessageType.TEXT;
+
+        builder.setTitle(isTextMessage ? "Edit Message" : "Edit Caption");
+        editTextNewText.setHint(isTextMessage ? "Enter new message" : "Enter new caption");
+        editTextNewText.setText(isTextMessage ? message.getContent() : message.getCaption());
+
         builder.setPositiveButton("Save", (dialog, which) -> {
-            String newContent = editTextNewMessage.getText().toString().trim();
-            if (!newContent.isEmpty()) {
-                databaseHelper.updateMessage(message.getTimestamp(), newContent);
-                message.setContent(newContent);
+            String newText = editTextNewText.getText().toString().trim();
+
+            if (isTextMessage) {
+                if (!newText.isEmpty()) {
+                    databaseHelper.updateMessage(message.getTimestamp(), newText);
+                    message.setContent(newText);
+                    notifyItemChanged(position);
+                }
+            } else {
+                databaseHelper.updateMessageCaption(message.getTimestamp(), newText);
+                message.setCaption(newText);
                 notifyItemChanged(position);
             }
         });
+
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
     }
@@ -315,3 +325,4 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void onSelectionModeChanged(boolean isSelectionMode, int selectedCount);
     }
 }
+

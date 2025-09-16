@@ -160,10 +160,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return messageList;
     }
 
-    /**
-     * THIS IS THE MISSING METHOD.
-     * It gets the single most recent message between two users.
-     */
     public Message getLastMessage(String user1, String user2) {
         Message message = null;
         SQLiteDatabase db = this.getReadableDatabase();
@@ -200,6 +196,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
     }
 
+    public void updateMessageCaption(long timestamp, String newCaption) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_MESSAGE_CAPTION, newCaption);
+        db.update(TABLE_MESSAGE, values, COLUMN_TIMESTAMP + " = ?", new String[]{String.valueOf(timestamp)});
+        db.close();
+    }
+
     public void deleteMessages(List<Long> timestamps) {
         if (timestamps == null || timestamps.isEmpty()) {
             return;
@@ -218,3 +222,4 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
     }
 }
+

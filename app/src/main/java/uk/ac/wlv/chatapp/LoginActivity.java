@@ -42,6 +42,9 @@ public class LoginActivity extends AppCompatActivity {
                 }
 
                 if (databaseHelper.checkUser(username, password)) {
+                    // Display "Login Successful" message
+                    Toast.makeText(LoginActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
+
                     SharedPreferences prefs = getSharedPreferences("ChatApp", MODE_PRIVATE);
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putString("USERNAME", username);

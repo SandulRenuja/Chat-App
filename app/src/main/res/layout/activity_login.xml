@@ -11,7 +11,6 @@
         android:id="@+id/loginForm"
         android:layout_width="0dp"
         android:layout_height="0dp"
-
         android:gravity="center_horizontal"
         android:orientation="vertical"
         android:paddingLeft="40dp"
@@ -32,8 +31,7 @@
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:textColor="#000"
-            android:textColorHint="#888"
-            />
+            android:textColorHint="#888" />
 
         <EditText
             android:id="@+id/editTextPassword"
@@ -55,7 +53,7 @@
             android:layout_marginTop="24dp"
             android:backgroundTint="#6E8DD0"
             android:fontFamily="sans-serif-medium"
-            android:text="Log in"
+            android:text="Login"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             app:cornerRadius="25dp"
